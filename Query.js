@@ -59,7 +59,7 @@ export class Query {
             !_databaseInstance
             || (
                 _databaseInstance
-                && _databaseInstance.dbname !== dbInstance.dbname // Change db instance
+                && _databaseInstance.dbname !== (dbInstance ? dbInstance.dbname : null) // Change db instance
             )
         ) {
             _databaseInstance = dbInstance;
