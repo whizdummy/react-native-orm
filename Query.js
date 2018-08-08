@@ -55,7 +55,13 @@ export class Query {
      * @param {Object} dbInstance
      */
     setDatabaseInstance(dbInstance) {
-        if (!_databaseInstance) {
+        if (
+            !_databaseInstance
+            || (
+                _databaseInstance
+                && _databaseInstance.dbname !== dbInstance.dbname // Change db instance
+            )
+        ) {
             _databaseInstance = dbInstance;
         }
     }

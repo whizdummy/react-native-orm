@@ -2,12 +2,6 @@ import SQLite from 'react-native-sqlite-storage';
 
 import { toSqlField } from './utils/fields';
 
-let _databaseName       = new WeakMap();
-let _version            = new WeakMap();
-let _description        = new WeakMap();
-let _size               = new WeakMap();
-let _databaseInstance   = new WeakMap();
-
 export class Schema {
     constructor(props = {}) {
         // SQLite configuration
@@ -19,11 +13,23 @@ export class Schema {
         }
 
         // Database configuration
-        _databaseName.set(this, props.databaseName);
-        _version.set(this, props.version || '1.0');
-        _description.set(this, props.description || `${ _databaseName.get(this) }; Version: ${ _version.get(this) }`);
-        _size.set(this, props.size || -1);
-        _databaseInstance.set(this, null);
+        this._databaseName      = props.databaseName;
+        this._databaseInstance  = null;
+        this._isPrepopulated    = props.isPrepopulated || false;
+        this._location          = props.location || 'default';
+
+        if (
+            props.hasOwnProperty('prepDbLocation')
+            && !props.hasOwnProperty('isPrepopulated')
+        ) {
+            throw new Error('"isPrepopulated" attribute is required.');
+        }
+
+        if (props.isPrepopulated) {
+            this._prepDbLocation = !props.hasOwnProperty('prepDbLocation')
+                                        ? 1 // Default location (www)
+                                        : props.prepDbLocation;
+        }
 
         this.open = this.open.bind(this);
         this.createTable = this.createTable.bind(this);
@@ -35,13 +41,18 @@ export class Schema {
     async open() {
         try {
             const openDbRes = await SQLite.openDatabase(
-                _databaseName.get(this),
-                _version.get(this),
-                _description.get(this),
-                _size.get(this)
+                this._isPrepopulated
+                    ? {
+                        name:               this._databaseName,
+                        createFromLocation: this._prepDbLocation
+                    }
+                    : {
+                        name:       this._databaseName,
+                        location:   this._location
+                    }
             );
 
-            _databaseInstance.set(this, openDbRes);
+            this._databaseInstance = openDbRes;
 
             return Promise.resolve({
                 statusCode: 200,
@@ -86,7 +97,7 @@ export class Schema {
             });
 
             try {
-                await (_databaseInstance.get(this)).transaction(async (tx) => {
+                await (this._databaseInstance).transaction(async (tx) => {
                     try {
                         // Create table
                         await tx.executeSql('CREATE TABLE IF NOT EXISTS '
