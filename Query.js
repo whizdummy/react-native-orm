@@ -8,7 +8,7 @@ import { Subquery } from './Subquery';
 SQLite.DEBUG(false);
 SQLite.enablePromise(true);
 
-let _databaseInstance   = null;
+let _databaseInstance   = new WeakMap();
 
 let _tableName          = new WeakMap();
 let _tableFields        = new WeakMap();
@@ -56,13 +56,13 @@ export class Query {
      */
     setDatabaseInstance(dbInstance) {
         if (
-            !_databaseInstance
+            !(_databaseInstance.get(this))
             || (
-                _databaseInstance
-                && _databaseInstance.dbname !== (dbInstance ? dbInstance.dbname : null) // Change db instance
+                _databaseInstance.get(this)
+                && (_databaseInstance.get(this)).dbname !== (dbInstance ? dbInstance.dbname : null) // Change db instance
             )
         ) {
-            _databaseInstance = dbInstance;
+            _databaseInstance.set(this, dbInstance);
         }
     }
 
@@ -300,7 +300,7 @@ export class Query {
                 ? `LIMIT ${ _limitNum.get(this) }`
                 : '';
 
-            const sqlQuery = await _databaseInstance.executeSql('SELECT '
+            const sqlQuery = await (_databaseInstance.get(this)).executeSql('SELECT '
                 + (_distinctClause.get(this) ? `${ _distinctClause.get(this) } ` : '')
                 + (_distinctClause.get(this) ? 'FROM ' : fields + ' FROM ') 
                 + _tableName.get(this) + ' '
@@ -339,7 +339,7 @@ export class Query {
     insert(data = []) {
         return new Promise(async (resolve, reject) => {
             try {
-                await _databaseInstance.transaction(async (tx) => {
+                await (_databaseInstance.get(this)).transaction(async (tx) => {
                     let length = data.length;
                     let value = {};
 
@@ -401,7 +401,7 @@ export class Query {
     update(value) {
         return new Promise(async (resolve, reject) => {
             try {
-                await _databaseInstance.transaction(async (tx) => {
+                await (_databaseInstance.get(this)).transaction(async (tx) => {
                     let tableFieldUpdates = [];
                     let dataValues = [];
 
@@ -445,7 +445,7 @@ export class Query {
     delete() {
         return new Promise(async (resolve, reject) => {
             try {
-                await _databaseInstance.transaction(async (tx) => {
+                await (_databaseInstance.get(this)).transaction(async (tx) => {
                     const deleteQueryFormat = 'DELETE FROM ' + _tableName.get(this)
                         + ' WHERE uuid = ?';
 
@@ -476,7 +476,7 @@ export class Query {
         return new Promise(async (resolve, reject) => {
             try {
                 const selectCountQuery = `SELECT COUNT(*) AS count FROM ${ _tableName.get(this) }`;
-                const queryResult = await _databaseInstance.executeSql(selectCountQuery);
+                const queryResult = await (_databaseInstance.get(this)).executeSql(selectCountQuery);
                 
                 return resolve({
                     statusCode: 200,
