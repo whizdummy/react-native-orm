@@ -1,6 +1,12 @@
 import SQLite from 'react-native-sqlite-storage';
 
 import { toSqlField } from './utils/fields';
+import {
+    createMigrationTable,
+    createMigrationTableRecord
+} from 'react-native-orm/utils/migration';
+import { changeTableRecord } from 'react-native-orm/utils/table';
+import { isEmpty } from 'react-native-orm/utils/checker';
 
 export class Schema {
     constructor(props = {}) {
@@ -54,6 +60,8 @@ export class Schema {
 
             this._databaseInstance = openDbRes;
 
+            await createMigrationTable(this._databaseInstance);
+
             return Promise.resolve({
                 statusCode: 200,
                 message: 'Database opened successfully.',
@@ -97,20 +105,43 @@ export class Schema {
             });
 
             try {
+                let tableInfoRes = '';
+
                 await (this._databaseInstance).transaction(async (tx) => {
-                    try {
+                    // Check table info (If existing)
+                    tableInfoRes = await tx.executeSql(
+                        `PRAGMA table_info('${ model.getModelName() }')`
+                    );
+                });
+
+                await (this._databaseInstance).transaction(async (tx) => {
+                    if (tableInfoRes[1].rows.length === 0) {
                         // Create table
                         await tx.executeSql('CREATE TABLE IF NOT EXISTS '
                             + model.getModelName()
                             + '(' + sqlFieldFormat + ');'
                         );
-                    } catch (err) {
-                        console.log('Table creation error:', err);
 
-                        return reject({
-                            statusCode: 500,
-                            message: 'Table creation error.'
-                        });
+                        // Create migration record ("createTable" type)
+                        await createMigrationTableRecord(
+                            this._databaseInstance,
+                            model.getModelName(),
+                            1,
+                            'createTable',
+                            `Created new table (Columns: ${ Object.keys(fields).join(', ') })`
+                        );
+                    } else if (
+                        !isEmpty(model.addColumns())
+                        && !isEmpty(model.addColumns()).version
+                        && !isEmpty(model.addColumns()).fields
+                    ) {
+                        // Add new columns
+                        changeTableRecord(
+                            this._databaseInstance,
+                            model.getModelName(),
+                            model.addColumns(),
+                            'addColumns'
+                        );
                     }
                 });
             } catch (err) {

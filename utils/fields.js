@@ -1,4 +1,37 @@
 /**
+ * Gets SQL data type
+ * 
+ * @param {string} fieldName 
+ */
+export const getSqlFieldDataType = (fieldName) => {
+    let dataType = '';
+
+    switch (fieldName) {
+        case 'primary': {
+            return 'PRIMARY KEY';
+        }
+
+        case 'string': {
+            return 'VARCHAR(255)';
+        }
+
+        case 'text': {
+            return 'TEXT';
+        }
+
+        case 'boolean': { /* No break */ }
+            
+        case 'int': {
+            return 'INTEGER';
+        }
+
+        default: {
+            return dataType;
+        }
+    }
+}
+
+/**
  * Formats Model field values to SQL field
  * 
  * @param {string} field 
@@ -9,35 +42,7 @@ export const toSqlField = (field) => {
     let fieldFormat = '';
 
     fieldSplit.forEach((val, index) => {
-        switch (val) {
-            case 'primary': {
-                fieldFormat += 'PRIMARY KEY' + (index == fieldSplit.length - 1 ? '' : ' ');
-
-                break;
-            }
-
-            case 'string': {
-                fieldFormat += 'VARCHAR(255)' + (index == fieldSplit.length - 1 ? '' : ' ');
-
-                break;
-            }
-
-            case 'text': {
-                fieldFormat += 'TEXT' + (index == fieldSplit.length - 1 ? '' : ' ');
-
-                break;
-            }
-
-            case 'boolean': { /* No break */ }
-                
-            case 'int': {
-                fieldFormat += 'INTEGER' + (index == fieldSplit.length - 1 ? '' : ' ');                
-
-                break;
-            }
-
-            default: {}
-        }
+        fieldFormat += getSqlFieldDataType(val) + (index == fieldSplit.length - 1 ? '' : ' ');
     });
 
     return fieldFormat;
