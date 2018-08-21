@@ -3,6 +3,8 @@ import SQLite from 'react-native-sqlite-storage';
 import { unserialize } from './utils/serializer';
 import { formatTimestamp } from './utils/timestamp';
 import { Subquery } from './Subquery';
+import { getTableFields } from 'react-native-orm/utils/table';
+import { getFilteredModelFields } from 'react-native-orm/utils/fields';
 
 // SQLite configuration
 SQLite.DEBUG(false);
@@ -22,8 +24,21 @@ let _distinctClause     = new WeakMap();
 
 export class Query {
     constructor(props = {}) {
-        _tableName.set(this, '');
-        _tableFields.set(this, {});
+        this.setDatabaseInstance(props.dbInstance);
+
+        _tableName.set(this, props.tableName);
+        _tableFields.set(
+            this,
+            props.hasOwnProperty('assignableFields')
+            && (props.assignableFields).length > 0
+                ? props.assignableFields
+                : {
+                    ...props.tableFields,
+                    created_at: 'string',
+                    updated_at: 'string',
+                    deleted_at: 'string'
+                }
+        );
         _whereClause.set(this, '');
         _whereClauseValues.set(this, []);    
         _limitNum.set(this, 0);
@@ -295,7 +310,12 @@ export class Query {
      */
     get() {
         return new Promise(async (resolve, reject) => {
-            const fields = Object.keys(_tableFields.get(this)).join(', ');
+            const savedTableFields = (await getTableFields(_databaseInstance.get(this), _tableName.get(this))).data;
+            const filteredFields = getFilteredModelFields(
+                savedTableFields,
+                _tableFields.get(this),
+            );
+            const fields = Object.keys(filteredFields).join(', ');
             const limitQueryFormat = _limitNum.get(this) > 0
                 ? `LIMIT ${ _limitNum.get(this) }`
                 : '';
@@ -331,7 +351,7 @@ export class Query {
             return resolve({
                 statusCode: 200,
                 message: 'Successful query',
-                data: unserialize(data, _tableFields.get(this))
+                data: unserialize(data, filteredFields)
             });
         });
     }
@@ -401,11 +421,17 @@ export class Query {
     update(value) {
         return new Promise(async (resolve, reject) => {
             try {
+                const savedTableFields = (await getTableFields(_databaseInstance.get(this), _tableName.get(this))).data;
+                const filteredFields = getFilteredModelFields(
+                    savedTableFields,
+                    _tableFields.get(this),
+                );
+
                 await (_databaseInstance.get(this)).transaction(async (tx) => {
                     let tableFieldUpdates = [];
                     let dataValues = [];
 
-                    Object.keys(_tableFields.get(this)).forEach(key => {
+                    Object.keys(filteredFields).forEach(key => {
                         tableFieldUpdates.push(`${ key } = ?`);
                         
                         // Create/update default timestamp (updated_at only)

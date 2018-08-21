@@ -1,4 +1,7 @@
-import { toSqlField } from "react-native-orm/utils/fields";
+import {
+    fromSqlField,
+    toSqlField,
+} from "react-native-orm/utils/fields";
 import {
     createMigrationTableRecord,
     hasExistingMigrationTableRecord
@@ -49,6 +52,42 @@ export const changeTableRecord = (databaseInstance, tableName, data, type) => {
     });
 }
 
+export const getTableFields = (databaseInstance, tableName) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let tableFields = {};
+
+            await databaseInstance.transaction(async (tx) => {
+                const queryRes = await tx.executeSql(
+                    `PRAGMA table_info('${ tableName }')`
+                );
+
+                for (let i = 0; i < queryRes[1].rows.length; i++) {
+                    const item = queryRes[1].rows.item(i);
+
+                    tableFields = {
+                        ...tableFields,
+                        [item.name]: fromSqlField(item)
+                    };
+                }
+            });
+
+            return resolve({
+                statusCode: 200,
+                message:    'table fields successfully fetched',
+                data:       tableFields
+            });
+        } catch (err) {
+            console.log('getTableFields error:', err);
+
+            return reject({
+                statusCode: 500,
+                message:    'Get table fields failed.'
+            });
+        }
+    })   
+}
+
 const updateTableRecord = (databaseInstance, tableName, data) => {
     return new Promise(async (resolve, reject) => {
         try {
@@ -63,7 +102,7 @@ const updateTableRecord = (databaseInstance, tableName, data) => {
 
             let sqlFormatLength = sqlFormat.length;
 
-            while(sqlFormatLength--) {
+            while (sqlFormatLength--) {
                 await databaseInstance.transaction(async (tx) => {
                     await tx.executeSql(sqlFormat[sqlFormatLength]);
                 });

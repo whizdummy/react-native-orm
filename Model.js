@@ -7,22 +7,33 @@ let _assignableFields   = new WeakMap();
 let _selectedField      = new WeakMap();
 let _isEdit             = new WeakMap();
 let _keyValue           = new WeakMap();
+let _modelName          = new WeakMap();
+let _modelFields        = new WeakMap();
 
 export class Model extends Query {
-    constructor() {
-        super();
+    constructor(props = {}) {
+        super(props);
 
-        this.modelName = '';
-        this.fields = {};
-
-        _assignableFields.set(this, [
-            'created_at',
-            'updated_at',
-            'deleted_at'
-        ]);
+        _assignableFields.set(
+            this,
+            props.hasOwnProperty('assignableFields')
+            && (props.assignableFields).length > 0
+                ? (props.assignableFields).concat([
+                    'created_at',
+                    'updated_at',
+                    'deleted_at'
+                ])
+                : (Object.keys(props.tableFields)).concat([
+                    'created_at',
+                    'updated_at',
+                    'deleted_at'
+                ])
+        );
         _selectedField.set(this, '');
         _isEdit.set(this, false);
         _keyValue.set(this, {});
+        _modelName.set(this, props.tableName);
+        _modelFields.set(this, props.tableFields);
 
         this.setAssignableFields = this.setAssignableFields.bind(this);
         this.getField = this.getField.bind(this);
@@ -33,6 +44,22 @@ export class Model extends Query {
         this.save = this.save.bind(this);
         this.remove = this.remove.bind(this);
         this.create = this.create.bind(this);
+    }
+
+    /**
+     * Gets model fields
+     * 
+     */
+    getModelFields = () => {
+        return _modelFields.get(this);
+    }
+
+    /**
+     * Gets model name
+     * 
+     */
+    getModelName = () => {
+        return _modelName.get(this);
     }
 
     /**
