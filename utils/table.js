@@ -52,17 +52,22 @@ export const changeTableRecord = (databaseInstance, tableName, data, type) => {
 const updateTableRecord = (databaseInstance, tableName, data) => {
     return new Promise(async (resolve, reject) => {
         try {
-            let sqlFormat = '';
+            let sqlFormat = [];
 
             Object.keys(data.fields).forEach(fieldVal => {
-                sqlFormat += `
+                sqlFormat.push(`
                     ALTER TABLE ${ tableName }
-                    ADD COLUMN ${ fieldVal } ${ toSqlField(data.fields[fieldVal]) };`;
+                    ADD COLUMN ${ fieldVal } ${ toSqlField(data.fields[fieldVal]) };
+                `);
             });
 
-            await databaseInstance.transaction(async (tx) => {
-                await tx.executeSql(sqlFormat);
-            });
+            let sqlFormatLength = sqlFormat.length;
+
+            while(sqlFormatLength--) {
+                await databaseInstance.transaction(async (tx) => {
+                    await tx.executeSql(sqlFormat[sqlFormatLength]);
+                });
+            }
 
             return resolve();
         } catch (err) {
