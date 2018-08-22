@@ -131,7 +131,8 @@ export class Schema {
                             `Created new table (Columns: ${ Object.keys(fields).join(', ') })`
                         );
                     } else if (
-                        !isEmpty(model.addColumns())
+                        typeof model.addColumns === 'function'
+                        && !isEmpty(model.addColumns())
                         && !isEmpty(model.addColumns()).version
                         && !isEmpty(model.addColumns()).fields
                     ) {
