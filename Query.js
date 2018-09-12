@@ -430,20 +430,28 @@ export class Query {
                 await (_databaseInstance.get(this)).transaction(async (tx) => {
                     let tableFieldUpdates = [];
                     let dataValues = [];
+                    let mainId = 'uuid';
 
                     Object.keys(filteredFields).forEach(key => {
                         tableFieldUpdates.push(`${ key } = ?`);
                         
                         // Create/update default timestamp (updated_at only)
                         dataValues.push(key === 'updated_at' ? formatTimestamp(new Date()) : value[key]);   
+
+                        // Override mainId via primary key
+                        const newId = ((filteredFields[key]).split('|')).find(fieldKey => fieldKey === 'primary');
+
+                        if (newId) {
+                            mainId = key;
+                        }
                     });
 
                     const updateQueryFormat = 'UPDATE ' + _tableName.get(this)
                         + ' SET '
                         + tableFieldUpdates.join(', ')
-                        + ' WHERE uuid = ?;';
+                        + ` WHERE ${ mainId } = ?;`;
 
-                    await tx.executeSql(updateQueryFormat, dataValues.concat([ (_keyValue.get(this)).uuid ]));
+                    await tx.executeSql(updateQueryFormat, dataValues.concat([ (_keyValue.get(this))[mainId] ]));
 
                     return resolve({
                         statusCode: 200,
@@ -471,11 +479,28 @@ export class Query {
     delete() {
         return new Promise(async (resolve, reject) => {
             try {
-                await (_databaseInstance.get(this)).transaction(async (tx) => {
-                    const deleteQueryFormat = 'DELETE FROM ' + _tableName.get(this)
-                        + ' WHERE uuid = ?';
+                const savedTableFields = (await getTableFields(_databaseInstance.get(this), _tableName.get(this))).data;
+                const filteredFields = getFilteredModelFields(
+                    savedTableFields,
+                    _tableFields.get(this),
+                );
 
-                    await tx.executeSql(deleteQueryFormat, [ (_keyValue.get(this)).uuid ]);
+                await (_databaseInstance.get(this)).transaction(async (tx) => {
+                    let mainId = 'uuid';
+
+                    Object.keys(filteredFields).forEach(key => {
+                        // Override mainId via primary key
+                        const newId = ((filteredFields[key]).split('|')).find(fieldKey => fieldKey === 'primary');
+    
+                        if (newId) {
+                            mainId = key;
+                        }
+                    });
+
+                    const deleteQueryFormat = 'DELETE FROM ' + _tableName.get(this)
+                        + ` WHERE ${ mainId } = ?`;
+
+                    await tx.executeSql(deleteQueryFormat, [ (_keyValue.get(this))[mainId] ]);
 
                     return resolve({
                         statusCode: 200,
