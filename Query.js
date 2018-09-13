@@ -14,6 +14,7 @@ let _databaseInstance   = new WeakMap();
 
 let _tableName          = new WeakMap();
 let _tableFields        = new WeakMap();
+let _primaryKey         = new WeakMap();
 let _whereClause        = new WeakMap();
 let _whereClauseValues  = new WeakMap();    
 let _limitNum           = new WeakMap();
@@ -39,6 +40,7 @@ export class Query {
                     deleted_at: 'string'
                 }
         );
+        _primaryKey.set(this, props.key || 'uuid');
         _whereClause.set(this, '');
         _whereClauseValues.set(this, []);    
         _limitNum.set(this, 0);
@@ -430,28 +432,20 @@ export class Query {
                 await (_databaseInstance.get(this)).transaction(async (tx) => {
                     let tableFieldUpdates = [];
                     let dataValues = [];
-                    let mainId = 'uuid';
 
                     Object.keys(filteredFields).forEach(key => {
                         tableFieldUpdates.push(`${ key } = ?`);
                         
                         // Create/update default timestamp (updated_at only)
                         dataValues.push(key === 'updated_at' ? formatTimestamp(new Date()) : value[key]);   
-
-                        // Override mainId via primary key
-                        const newId = ((filteredFields[key]).split('|')).find(fieldKey => fieldKey === 'primary');
-
-                        if (newId) {
-                            mainId = key;
-                        }
                     });
 
                     const updateQueryFormat = 'UPDATE ' + _tableName.get(this)
                         + ' SET '
                         + tableFieldUpdates.join(', ')
-                        + ` WHERE ${ mainId } = ?;`;
+                        + ` WHERE ${ _primaryKey.get(this) } = ?;`;
 
-                    await tx.executeSql(updateQueryFormat, dataValues.concat([ (_keyValue.get(this))[mainId] ]));
+                    await tx.executeSql(updateQueryFormat, dataValues.concat([ (_keyValue.get(this))[ _primaryKey.get(this) ] ]));
 
                     return resolve({
                         statusCode: 200,
@@ -486,21 +480,10 @@ export class Query {
                 );
 
                 await (_databaseInstance.get(this)).transaction(async (tx) => {
-                    let mainId = 'uuid';
-
-                    Object.keys(filteredFields).forEach(key => {
-                        // Override mainId via primary key
-                        const newId = ((filteredFields[key]).split('|')).find(fieldKey => fieldKey === 'primary');
-    
-                        if (newId) {
-                            mainId = key;
-                        }
-                    });
-
                     const deleteQueryFormat = 'DELETE FROM ' + _tableName.get(this)
-                        + ` WHERE ${ mainId } = ?`;
+                        + ` WHERE ${ _primaryKey.get(this) } = ?`;
 
-                    await tx.executeSql(deleteQueryFormat, [ (_keyValue.get(this))[mainId] ]);
+                    await tx.executeSql(deleteQueryFormat, [ (_keyValue.get(this))[ _primaryKey.get(this) ] ]);
 
                     return resolve({
                         statusCode: 200,
