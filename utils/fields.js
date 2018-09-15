@@ -107,6 +107,10 @@ export const getSqlFieldDataType = (fieldName) => {
             return 'INTEGER';
         }
 
+        case 'default': {
+            return 'DEFAULT';
+        }
+
         default: {
             return dataType;
         }
@@ -124,8 +128,52 @@ export const toSqlField = (field) => {
     let fieldFormat = '';
 
     fieldSplit.forEach((val, index) => {
-        fieldFormat += getSqlFieldDataType(val) + (index == fieldSplit.length - 1 ? '' : ' ');
+        if ((/default/i).test(val)) {
+            const defaultFieldSplit = val.split(':');
+            const defaultValue = getDefaultValue(
+                fieldSplit[index - 1],
+                defaultFieldSplit.length > 1
+                    ? defaultFieldSplit[1]
+                    : ''
+            );
+
+            fieldFormat += (getSqlFieldDataType(defaultFieldSplit[0]) + ' ' + defaultValue)
+                                + (index == fieldSplit.length - 1 ? '' : ' ');
+        } else {
+            fieldFormat += getSqlFieldDataType(val) + (index == fieldSplit.length - 1 ? '' : ' ');
+        }
     });
 
     return fieldFormat;
+}
+
+const getDefaultValue = (dataType, defaultValue = '') => {
+    if (dataType === 'boolean') {
+        if (
+            (
+                !isNaN(defaultValue)
+                && defaultValue > 0
+            ) || (
+                isNaN(defaultValue)
+                && defaultValue.toLowerCase() === 'true'
+            )
+        ) {
+            return 1;
+        } else if (
+            (
+                !isNaN(defaultValue)
+                && defaultValue <= 0
+            ) || (
+                isNaN(defaultValue)
+                && defaultValue.toLowerCase() === 'false'
+            ) || (
+                isNaN(defaultValue)
+                && !defaultValue
+            )
+        ) {
+            return 0;
+        }
+    }
+
+    return defaultValue;
 }
