@@ -509,9 +509,13 @@ export class Query {
     count() {
         return new Promise(async (resolve, reject) => {
             try {
-                const selectCountQuery = `SELECT COUNT(*) AS count FROM ${ _tableName.get(this) }`;
-                const queryResult = await (_databaseInstance.get(this)).executeSql(selectCountQuery);
+                const selectCountQuery = `SELECT COUNT(*) AS count FROM ${ _tableName.get(this) } ${ _whereClause.get(this) };`;
+                const queryResult = await (_databaseInstance.get(this)).executeSql(selectCountQuery, _whereClauseValues.get(this));
                 
+                // Reset values
+                _whereClause.set(this, '');
+                _whereClauseValues.set(this, []);
+
                 return resolve({
                     statusCode: 200,
                     message: 'Query executed successfully.',
