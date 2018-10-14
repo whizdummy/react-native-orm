@@ -257,18 +257,21 @@ export class Model extends Query {
     save() {
         return new Promise(async (resolve, reject) => {
             const isEdit = _isEdit.get(this);
+            const value = _keyValue.get(this);
 
             // Reset value
             _isEdit.set(this, false);
+            _selectedField.set(this, '');
+            _keyValue.set(this, {});
 
             return resolve(
                 !isEdit
                     ? (
                         await this.insert([
-                            (serialize([ _keyValue.get(this) ]))[0]
+                            (serialize([ value ]))[0]
                         ])
                     ) : (
-                        await this.update(serialize([ _keyValue.get(this) ])[0])
+                        await this.update(serialize([ value ])[0])
                     )
             );
         });
