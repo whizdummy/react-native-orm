@@ -56,8 +56,15 @@ export const getModelFieldDataType = (sqlFieldName) => {
  * @param {Object} tableFields 
  * @param {Array|Object} assignableFields 
  */
-export const getFilteredModelFields = (tableFields, assignableFields) => {
+export const getFilteredModelFields = (tableFields, assignableFields, excludeTimestamps = []) => {
+    const timestamps = [
+        'created_at',
+        'updated_at',
+        'deleted_at'
+    ];
+
     let filteredFields = {};
+    let includedTimestamps = {};
 
     if (Array.isArray(assignableFields)) {
         for (let fieldName of Object.keys(tableFields)) {
@@ -72,11 +79,25 @@ export const getFilteredModelFields = (tableFields, assignableFields) => {
         filteredFields = assignableFields;
     }
 
+    if (excludeTimestamps.length > 0) {
+        timestamps.forEach(timestamp => {
+            const excludedTimestamp = excludeTimestamps.find(exTimestamp => exTimestamp === timestamp);
+
+            if (!excludedTimestamp) {
+                includedTimestamps[timestamp] = 'string';
+            }
+        });
+    } else {
+        includedTimestamps = {
+            created_at: 'string',
+            updated_at: 'string',
+            deleted_at: 'string'
+        };
+    }
+
     return {
         ...filteredFields,
-        created_at: 'string',
-        updated_at: 'string',
-        deleted_at: 'string'
+        ...includedTimestamps
     };
 }
 

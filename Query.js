@@ -22,6 +22,7 @@ let _keyValue           = new WeakMap();
 let _subqueryInstance   = new WeakMap();
 let _orderByClause      = new WeakMap();
 let _distinctClause     = new WeakMap();
+let _excludedTimestamps = new WeakMap();
 
 export class Query {
     constructor(props = {}) {
@@ -48,6 +49,13 @@ export class Query {
         _subqueryInstance.set(this, new Subquery());
         _orderByClause.set(this, '');
         _distinctClause.set(this, '');
+        _excludedTimestamps.set(
+            this,
+            props.hasOwnProperty('excludedTimestamps')
+            && (props.excludedTimestamps).length > 0
+                ? props.excludedTimestamps
+                : []
+        );
 
         this.setDatabaseInstance = this.setDatabaseInstance.bind(this);
         this.setKeyValue = this.setKeyValue.bind(this);
@@ -316,6 +324,7 @@ export class Query {
             const filteredFields = getFilteredModelFields(
                 savedTableFields,
                 _tableFields.get(this),
+                _excludedTimestamps.get(this)
             );
             const fields = Object.keys(filteredFields).join(', ');
             const limitQueryFormat = _limitNum.get(this) > 0
@@ -427,6 +436,7 @@ export class Query {
                 const filteredFields = getFilteredModelFields(
                     savedTableFields,
                     _tableFields.get(this),
+                    _excludedTimestamps.get(this)
                 );
 
                 await (_databaseInstance.get(this)).transaction(async (tx) => {
@@ -477,6 +487,7 @@ export class Query {
                 const filteredFields = getFilteredModelFields(
                     savedTableFields,
                     _tableFields.get(this),
+                    _excludedTimestamps.get(this)
                 );
 
                 await (_databaseInstance.get(this)).transaction(async (tx) => {
