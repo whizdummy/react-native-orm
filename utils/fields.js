@@ -175,5 +175,5 @@ const getDefaultValue = (dataType, defaultValue = '') => {
         }
     }
 
-    return defaultValue;
+    return `'${ defaultValue }'`;
 }
