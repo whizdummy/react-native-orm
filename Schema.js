@@ -133,16 +133,26 @@ export class Schema {
                     } else if (
                         typeof model.addColumns === 'function'
                         && !isEmpty(model.addColumns())
-                        && !isEmpty(model.addColumns()).version
-                        && !isEmpty(model.addColumns()).fields
+                        // && !isEmpty(model.addColumns()).version
+                        // && !isEmpty(model.addColumns()).fields
                     ) {
                         // Add new columns
-                        changeTableRecord(
-                            this._databaseInstance,
-                            model.getModelName(),
-                            model.addColumns(),
-                            'addColumns'
-                        );
+
+                        model.addColumns().forEach(async(addedColumnDetails) => {
+                            if(
+                                !isEmpty(addedColumnDetails).version
+                                && !isEmpty(addedColumnDetails).fields
+                            ){
+                                // console.log("add columns", addedColumnDetails)
+                                await changeTableRecord(
+                                    this._databaseInstance,
+                                    model.getModelName(),
+                                    addedColumnDetails,
+                                    'addColumns'
+                                );
+                            }
+                        })
+
                     }
                 });
             } catch (err) {

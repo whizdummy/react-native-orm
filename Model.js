@@ -8,6 +8,7 @@ let _selectedField      = new WeakMap();
 let _isEdit             = new WeakMap();
 let _keyValue           = new WeakMap();
 let _modelName          = new WeakMap();
+let _addColumns         = new WeakMap();
 let _modelFields        = new WeakMap();
 
 export class Model extends Query {
@@ -33,6 +34,7 @@ export class Model extends Query {
         _isEdit.set(this, false);
         _keyValue.set(this, {});
         _modelName.set(this, props.tableName);
+        _addColumns.set(this, props.addColumns);
         _modelFields.set(this, props.tableFields);
 
         this.setAssignableFields = this.setAssignableFields.bind(this);
@@ -60,6 +62,14 @@ export class Model extends Query {
      */
     getModelName = () => {
         return _modelName.get(this);
+    }
+
+    /**
+     * Gets added columns name
+     * 
+     */
+    addColumns = () => {
+        return _addColumns.get(this);
     }
 
     /**
